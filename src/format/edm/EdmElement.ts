@@ -1,4 +1,6 @@
 import { None, Option, Some } from "prelude-ts";
+import { BlockWriter } from "~/util/BlockWriter";
+import { MapCarrier } from "~/util/MapCarrier";
 
 
 export enum Type {
@@ -22,11 +24,11 @@ export enum Type {
     MAP,
 }
 
-function formatTypeName(type: Type): String {
+export function formatTypeName(type: Type): String {
     return Type[type].toLowerCase();
 }
 
-class EdmElement<T> {
+export class EdmElement<T> {
 
     static EMPTY: EdmElement<Option<EdmElement<unknown>>> = new EdmElement(Option.none(), Type.OPTIONAL);
 
@@ -84,20 +86,19 @@ class EdmElement<T> {
     }
 
     public toString(): String {
-        return format(new BlockWriter()).buildResult();
+        return this.format(new BlockWriter()).buildResult();
     }
 
     format(formatter: BlockWriter): BlockWriter {
         switch (this.type) {
             case Type.BYTES:
-              formatter.writeBlock("bytes(", ")", false, (blockWriter) => {
+              return formatter.writeBlock("bytes(", ")", (blockWriter) => {
                 blockWriter.write(Buffer.from(this.cast<Uint8Array>()).toString("base64"));
-              });
-              break;
+              }, false);
       
             case Type.MAP:
-              formatter.writeBlock("map({", "})", true, (blockWriter) => {
-                const map = this.cast<MapType>();
+            return formatter.writeBlock("map({", "})", (blockWriter) => {
+                const map = this.cast<Map<String, EdmElement<?>>>();
                 let idx = 0;
       
                 map.forEach((value, key) => {
@@ -112,21 +113,19 @@ class EdmElement<T> {
                   idx++;
                 });
               });
-              break;
       
             case Type.SEQUENCE:
-              formatter.writeBlock("sequence([", "])", true, (blockWriter) => {
-                const list = this.cast<ListType>();
+              return formatter.writeBlock("sequence([", "])", (blockWriter) => {
+                const list = this.cast<Array<EdmElement<?>>>();
       
                 for (let idx = 0; idx < list.length; idx++) {
                   list[idx].format(formatter);
                   if (idx < list.length - 1) formatter.writeln(",");
                 }
               });
-              break;
       
             case Type.OPTIONAL:
-              formatter.writeBlock("optional(", ")", false, (blockWriter) => {
+              return formatter.writeBlock("optional(", ")", (blockWriter) => {
                 const optional = this.cast<Option<EdmElement<any>>>();
       
                 if (optional.isSome()) {
@@ -134,20 +133,17 @@ class EdmElement<T> {
                 } else {
                     formatter.write("")
                 }
-              });
-              break;
+              }, false);
       
             case Type.STRING:
-              formatter.writeBlock("string(\"", "\")", false, (blockWriter) => {
+              return formatter.writeBlock("string(\"", "\")", (blockWriter) => {
                 blockWriter.write(String(this.value));
-              });
-              break;
+              }, false);
       
             default:
-              formatter.writeBlock(`${this.type}(`, ")", false, (blockWriter) => {
+              return formatter.writeBlock(`${this.type}(`, ")", (blockWriter) => {
                 blockWriter.write(String(this.value));
-              });
-              break;
+              }, false);
           }
         }
 
@@ -224,4 +220,57 @@ class EdmElement<T> {
     public static consumeMap(value: Map<String, EdmElement<unknown>>): EdmElement<Map<String, EdmElement<unknown>>> {
         return new EdmElement(new Map(), Type.MAP); // Hangry
     } 
+}
+
+export class EdmMap extends EdmElement<Map<String, EdmElement<?>>> implements MapCarrier {
+
+    private map:  Map<String, EdmElement<?>>;
+
+    constructor(map: Map<String, EdmElement<?>> ) {
+        super(new Map(map), Type.MAP);
+        this.map = map;
+    }
+
+    getWithErrors<T>(ctx: SerializationContext, key: KeyedEndec<T>): T {
+        if (!this.has(key)) return key.defaultValue();
+        return key.endec().decodeFully(ctx, EdmDeserializer::of, this.map.get(key.key()));
+    }
+
+    put<T>(ctx: SerializationContext, key: KeyedEndec<T>, value: T): void {
+        this.map.put(key.key(), key.endec().encodeFully(ctx, EdmSerializer.of, value));
+    }
+
+    delete<T>(key: KeyedEndec<T>): void {
+        this.map.remove(key.key());
+    }
+
+    has<T>(key: KeyedEndec<T>): boolean {
+        return this.map.containsKey(key.key());
+    }
+
+    get<T>(ctx: SerializationContext, key: KeyedEndec<T>): T {
+        try {
+            return this.getWithErrors(ctx, key);
+        } catch (e) {
+            return key.defaultValue();
+        }
+    }
+
+    putIfNotNull<T>(ctx: SerializationContext, key: KeyedEndec<T>, value: T): void {
+        if (value == null) return;
+        this.put(ctx, key, value);
+    }
+    
+    copy<T>(ctx: SerializationContext, key: KeyedEndec<T>, other: MapCarrier): void {
+        other.put(ctx, key, this.get(ctx, key));
+    }
+
+    copyIfPresent<T>(ctx: SerializationContext, key: KeyedEndec<T>, other: MapCarrier): void {
+        if (!this.has(key)) return;
+        this.copy(ctx, key, other);    
+    }
+
+    mutate<T>(ctx: SerializationContext, key: KeyedEndec<T>, mutator: (x: T) => T): void {
+        this.put(ctx, key, mutator.apply(this.get(ctx, key)));
+    }
 }
