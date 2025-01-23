@@ -1,4 +1,6 @@
 import { None, Option, Some } from "prelude-ts";
+import { KeyedEndec } from "~/impl/KeyedEndec";
+import { SerializationContext } from "~/SerializationContext";
 import { BlockWriter } from "~/util/BlockWriter";
 import { MapCarrier } from "~/util/MapCarrier";
 
@@ -98,7 +100,7 @@ export class EdmElement<T> {
       
             case Type.MAP:
             return formatter.writeBlock("map({", "})", (blockWriter) => {
-                const map = this.cast<Map<String, EdmElement<?>>>();
+                const map = this.cast<Map<String, EdmElement<unknown>>>();
                 let idx = 0;
       
                 map.forEach((value, key) => {
@@ -116,7 +118,7 @@ export class EdmElement<T> {
       
             case Type.SEQUENCE:
               return formatter.writeBlock("sequence([", "])", (blockWriter) => {
-                const list = this.cast<Array<EdmElement<?>>>();
+                const list = this.cast<Array<EdmElement<unknown>>>();
       
                 for (let idx = 0; idx < list.length; idx++) {
                   list[idx].format(formatter);
@@ -187,11 +189,11 @@ export class EdmElement<T> {
         return new EdmElement(value, Type.F64);
     }
 
-    static bool(value: number): EdmElement<number> {
+    static bool(value: boolean): EdmElement<boolean> {
         return new EdmElement(value, Type.BOOLEAN);
     }
 
-    static string(value: number): EdmElement<number> {
+    static string(value: string): EdmElement<string> {
         return new EdmElement(value, Type.STRING);
     }
 
@@ -222,30 +224,30 @@ export class EdmElement<T> {
     } 
 }
 
-export class EdmMap extends EdmElement<Map<String, EdmElement<?>>> implements MapCarrier {
+export class EdmMap extends EdmElement<Map<String, EdmElement<unknown>>> implements MapCarrier {
 
-    private map:  Map<String, EdmElement<?>>;
+    private map:  Map<String, EdmElement<unknown>>;
 
-    constructor(map: Map<String, EdmElement<?>> ) {
+    constructor(map: Map<String, EdmElement<unknown>> ) {
         super(new Map(map), Type.MAP);
         this.map = map;
     }
 
     getWithErrors<T>(ctx: SerializationContext, key: KeyedEndec<T>): T {
         if (!this.has(key)) return key.defaultValue();
-        return key.endec().decodeFully(ctx, EdmDeserializer::of, this.map.get(key.key()));
+        return key.getEndec().decodeFully(ctx, EdmDeserializer.of, this.map.get(key.getKey()));
     }
 
     put<T>(ctx: SerializationContext, key: KeyedEndec<T>, value: T): void {
-        this.map.put(key.key(), key.endec().encodeFully(ctx, EdmSerializer.of, value));
+        this.map.set(key.getKey(), key.getEndec().encodeFully(ctx, EdmSerializer.of, value));
     }
 
     delete<T>(key: KeyedEndec<T>): void {
-        this.map.remove(key.key());
+        this.map.delete(key.getKey());
     }
 
     has<T>(key: KeyedEndec<T>): boolean {
-        return this.map.containsKey(key.key());
+        return Array.from(this.map.keys()).includes(key.getKey());
     }
 
     get<T>(ctx: SerializationContext, key: KeyedEndec<T>): T {
@@ -271,6 +273,6 @@ export class EdmMap extends EdmElement<Map<String, EdmElement<?>>> implements Ma
     }
 
     mutate<T>(ctx: SerializationContext, key: KeyedEndec<T>, mutator: (x: T) => T): void {
-        this.put(ctx, key, mutator.apply(this.get(ctx, key)));
+        this.put(ctx, key, mutator(this.get(ctx, key)));
     }
 }

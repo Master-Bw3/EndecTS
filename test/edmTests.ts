@@ -1,12 +1,13 @@
 import { Option } from "prelude-ts";
 import * as utils from "./utils";
+import { EdmElement } from "~/format/edm/EdmElement";
 
 test('toString Formatting', () => {
 
     const edmElement = EdmElement.map(
         utils.make(() => new Map(), innerMap => {
             innerMap.set("ah_yes", EdmElement.sequence([EdmElement.i32(17), EdmElement.string("a")]));
-            innerMap.set("hmmm", EdmElement.optional(Option.none));
+            innerMap.set("hmmm", EdmElement.optional(Option.none()));
             innerMap.set("uhhh", EdmElement.optional(
                     EdmElement.map(
                         utils.make(() => new Map(), map => {

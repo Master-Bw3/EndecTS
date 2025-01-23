@@ -1,5 +1,5 @@
 function make<T>(supplier: () => T, consumer: (x: T) => void): T {
-    var t = supplier();
+    let t = supplier();
 
     consumer(t);
 

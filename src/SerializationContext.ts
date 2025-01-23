@@ -1,4 +1,7 @@
+import { SerializationAttribute } from "./SerializationAttribute";
+
 export class SerializationContext {
+
 
     private static EMPTY: SerializationContext = new SerializationContext(new Map(), new Set());
 
@@ -14,28 +17,28 @@ export class SerializationContext {
         return this.EMPTY;
     }
 
-     static attributes(...attributes: SerializationAttribute.Instance): SerializationContext {
+     static attributes(...attributes: Array<SerializationAttribute.Instance>): SerializationContext {
         if (attributes.length == 0) return this.EMPTY;
         return new SerializationContext(this.unpackAttributes(attributes), new Set());
     }
 
-     static suppressed(SerializationAttribute... attributes): SerializationContext {
+     static suppressed(...attributes: Array<SerializationAttribute>): SerializationContext {
         if (attributes.length == 0) return this.EMPTY;
         return new SerializationContext(new Map(), new Set(attributes));
     }
 
-     withAttributes(...attributes: SerializationAttribute.Instance): SerializationContext {
-        let newAttributes = this.unpackAttributes(attributes);
-        this.attributeValues.forEach((attribute, value) => {
-            if (!newAttributes.containsKey(attribute)) {
-                newAttributes.put(attribute, value);
+     withAttributes(...attributes: Array<SerializationAttribute.Instance>): SerializationContext {
+        let newAttributes = SerializationContext.unpackAttributes(attributes);
+        this.attributeValues.forEach((value, attribute) => {
+            if (!Array.from(newAttributes.keys()).includes(attribute)) {
+                newAttributes.set(attribute, value);
             }
         });
 
         return new SerializationContext(newAttributes, this.suppressedAttributes);
     }
 
-     withoutAttributes(...attributes: SerializationAttribute): SerializationContext {
+     withoutAttributes(...attributes: Array<SerializationAttribute>): SerializationContext {
         let newAttributes = new Map(this.attributeValues);
         for (const attribute of attributes) {
             newAttributes.delete(attribute);
@@ -44,16 +47,16 @@ export class SerializationContext {
         return new SerializationContext(newAttributes, this.suppressedAttributes);
     }
 
-     withSuppressed(...attributes: SerializationAttribute): SerializationContext {
+     withSuppressed(...attributes: Array<SerializationAttribute>): SerializationContext {
         let newSuppressed = new Set<SerializationAttribute>(this.suppressedAttributes);
-        attributes.array.forEach((attribute: SerializationAttribute) => {
+        attributes.forEach((attribute: SerializationAttribute) => {
             newSuppressed.add(attribute)
         });
 
         return new SerializationContext(this.attributeValues, newSuppressed);
     }
 
-     withoutSuppressed(...attributes: SerializationAttribute): SerializationContext {
+     withoutSuppressed(...attributes: Array<SerializationAttribute>): SerializationContext {
         let newSuppressed = new Set(this.suppressedAttributes);
         for (const attribute of attributes) {
             newSuppressed.delete(attribute);
@@ -63,9 +66,9 @@ export class SerializationContext {
     }
 
      and(other: SerializationContext): SerializationContext {
-        let newAttributeValues = new Map(...this.attributeValues, ...other.attributeValues);
+        let newAttributeValues = new Map([...this.attributeValues, ...other.attributeValues]);
 
-        let newSuppressed = new Set(...this.suppressedAttributes, ...other.suppressedAttributes);
+        let newSuppressed = new Set([...this.suppressedAttributes, ...other.suppressedAttributes]);
 
         return new SerializationContext(newAttributeValues, newSuppressed);
     }
@@ -87,7 +90,7 @@ export class SerializationContext {
     }
 
     private static unpackAttributes(attributes: Array<SerializationAttribute.Instance>): Map<SerializationAttribute, unknown> {
-        let attributeValues = new Map<SerializationAttribute, Object>();
+        let attributeValues = new Map<SerializationAttribute, unknown>();
         for (const instance of attributes) {
             attributeValues.set(instance.attribute(), instance.value());
         }

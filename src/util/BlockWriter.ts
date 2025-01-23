@@ -50,7 +50,7 @@ export class BlockWriter {
     }
 
     endBlock(): BlockWriter {
-        var endBlockData = this.blocks.pop()!;
+        let endBlockData = this.blocks.pop()!;
 
         if (endBlockData[0]) {
             this.indentLevel--;
