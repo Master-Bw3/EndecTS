@@ -1,5 +1,5 @@
 import { Deserializer } from "~/Deserializer";
-import { Endec } from "~/Endec";
+import { Endec } from "~/endec";
 import { SerializationAttribute } from "~/SerializationAttribute";
 import { SerializationContext } from "~/SerializationContext";
 import { Serializer } from "~/Serializer";

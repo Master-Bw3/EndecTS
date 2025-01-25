@@ -1,5 +1,5 @@
 import { Option } from "prelude-ts";
-import { Endec } from "~/Endec";
+import { Endec } from "~/endec";
 import { SelfDescribedSerializer } from "~/SelfDescribedSerializer";
 import { SerializationAttributes } from "~/SerializationAttributes";
 import { SerializationContext } from "~/SerializationContext";

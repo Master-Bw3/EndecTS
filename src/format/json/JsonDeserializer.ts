@@ -1,22 +1,24 @@
 import { Option, Stream } from "prelude-ts";
 import { Deserializer } from "~/Deserializer";
-import { Endec } from "~/Endec";
+import { Endec } from "~/endec";
 import { SelfDescribedDeSerializer } from "~/SelfDescribedDeserializer";
 import { SerializationAttributes } from "~/SerializationAttributes";
 import { SerializationContext } from "~/SerializationContext";
 import { Serializer } from "~/Serializer";
 import { RecursiveDeserializer } from "~/util/RecursiveDeserializer";
-import { JsonEndec } from "./JsonEndec";
+import type { JsonEndec } from "./JsonEndec";
 
 export class JsonDeserializer extends RecursiveDeserializer<unknown> implements SelfDescribedDeSerializer<unknown> {
 
+    private jsonEndec;
 
-    protected constructor(serialized: unknown) {
+    protected constructor(serialized: unknown, jsonEndec: JsonEndec) {
         super(serialized)
+        this.jsonEndec = jsonEndec;
     }
 
-    static of(serialized: unknown): JsonDeserializer {
-        return new JsonDeserializer(serialized);
+    static of(serialized: unknown, jsonEndec: JsonEndec): JsonDeserializer {
+        return new JsonDeserializer(serialized, jsonEndec);
     }
 
     setupContext(ctx: SerializationContext): SerializationContext {
@@ -102,7 +104,7 @@ export class JsonDeserializer extends RecursiveDeserializer<unknown> implements 
 
     private decodeValue<S>(ctx: SerializationContext, visitor: Serializer<S>, element: unknown): void {
         if (element === null) {
-            visitor.writeOptional(ctx, JsonEndec.INSTANCE, Option.none());
+            visitor.writeOptional(ctx, this.jsonEndec, Option.none());
         } else if (typeof element === "string") {
             visitor.writeString(ctx, element);
         } else if (typeof element === "boolean") {

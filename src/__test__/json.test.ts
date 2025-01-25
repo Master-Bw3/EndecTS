@@ -1,8 +1,8 @@
-import { Endec } from '~/Endec';
+import { Endec, StructEndecBuilder } from '~/endec';
 import { JsonSerializer } from '~/format/json/JsonSerializer';
 import { make } from './utils';
 import { JsonDeserializer } from '~/format/json/JsonDeserializer';
-import { StructEndecBuilder } from '~/impl/StructEndecBuilder';
+import { JsonEndec } from '~/format/json/JsonEndec';
 
 test('encode string', () => {
     const value = 'an epic string';
@@ -61,7 +61,7 @@ test('encode struct', () => {
         )
     );
 
-    const decodedValue = endec.decodeFully(JsonDeserializer.of, encodedElement);
+    const decodedValue = endec.decodeFully((x) => JsonDeserializer.of(x, JsonEndec.INSTANCE), encodedElement);
 
     expect(decodedValue).toEqual(structObject);
 });

@@ -1,4 +1,4 @@
-import { Endec } from "~/Endec";
+import { Endec } from "~/endec";
 
 export class KeyedEndec<F> {
 
