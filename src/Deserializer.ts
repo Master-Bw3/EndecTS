@@ -1,5 +1,5 @@
 import { Option } from "prelude-ts";
-import { Endec } from "./Endec";
+import { Endec } from "./endec";
 import { SerializationContext } from "./SerializationContext";
 
 export abstract class Deserializer<T> {
